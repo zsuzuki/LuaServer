@@ -5,6 +5,7 @@
 #include <cpprest/http_listener.h>
 #include <functional>
 #include <iostream>
+#include <map>
 #include <queue>
 #include <sol/sol.hpp>
 #include <string>
@@ -27,16 +28,30 @@ sol::state* luaState;
 http_listener listener;
 std::mutex    mutex;
 
-// 返答用
+// 返答用(GET)
 struct GetRes
 {
   using unique_lock = std::unique_lock<std::mutex>;
+  json::value                        result;
+  std::map<std::string, std::string> arguments;
+  std::condition_variable            cond;
+  std::mutex                         mutex;
+  unique_lock                        lock{mutex};
+};
+std::queue<GetRes*> queueGet;
+// 返答用(POST)
+struct PostRes
+{
+  using unique_lock = std::unique_lock<std::mutex>;
   json::value             result;
+  json::value             arguments;
   std::condition_variable cond;
   std::mutex              mutex;
   unique_lock             lock{mutex};
 };
-std::queue<GetRes*> queueGet;
+std::queue<PostRes*> queuePost;
+
+const json::value emptyStr = json::value::string(STR("empty"));
 
 //
 void
@@ -54,14 +69,22 @@ respond_get(http_request req)
   auto& lua = *luaState;
 
   GetRes r;
+
+  auto getVars = uri::split_query(req.request_uri().query());
+  for (auto& p : getVars)
+  {
+    auto key         = conversions::to_utf8string(p.first);
+    auto value       = conversions::to_utf8string(p.second);
+    r.arguments[key] = value;
+  }
+
   queueGet.push(&r);
   r.cond.wait(r.lock);
 
   if (r.result.is_null())
-  {
-    req.reply(status_codes::BadRequest, json::value::string(STR("empty")));
-  }
-  req.reply(status_codes::OK, r.result);
+    req.reply(status_codes::BadRequest, emptyStr);
+  else
+    req.reply(status_codes::OK, r.result);
 }
 
 // POSTに対する返答
@@ -72,21 +95,22 @@ respond_post(http_request req)
       .then([&](pplx::task<json::value> task) {
         try
         {
-          const auto& jval = task.get();
+          PostRes r;
+          r.arguments = task.get();
+          queuePost.push(&r);
+          r.cond.wait(r.lock);
 
-          if (!jval.is_null())
-          {
-          }
+          if (r.result.is_null())
+            req.reply(status_codes::BadRequest, emptyStr);
+          else
+            req.reply(status_codes::OK, r.result);
         }
         catch (http_exception const& e)
         {
           std::cout << e.what() << std::endl;
         }
-        std::cout << "done post." << std::endl;
       })
       .wait();
-
-  req.reply(status_codes::OK, json::value::string(STR("Post")));
 }
 
 // サーバー開始
@@ -139,11 +163,15 @@ void
 update()
 {
   auto& lua = *luaState;
+  // GETリクエストへの返答生成処理
   if (!queueGet.empty())
   {
-    auto* r = queueGet.front();
-    lua.script("Server.Response = Server.MakeGetResponse()");
-    sol::table t = lua["Server"]["Response"];
+    auto*      r    = queueGet.front();
+    sol::table args = lua.create_table();
+    for (auto& v : r->arguments)
+      args[v.first] = v.second;
+    auto       res = lua["Server"]["MakeGetResponse"](args);
+    sol::table t   = res[0];
     for (auto& kvp : t)
     {
       auto& key = kvp.first;
@@ -153,9 +181,27 @@ update()
         r->result[STR(key.as<std::string>())] = getValue(kvp.second);
       }
     }
-
     r->cond.notify_one();
     queueGet.pop();
+  }
+  // POSTリクエストへの返答生成処理
+  if (!queuePost.empty())
+  {
+    auto*      r    = queuePost.front();
+    auto       args = buildTable(lua, r->arguments);
+    auto       res  = lua["Server"]["MakePostResponse"](args);
+    sol::table t    = res[0];
+    for (auto& kvp : t)
+    {
+      auto& key = kvp.first;
+      if (key.is<std::string>())
+      {
+        // keyはstringのみサポート
+        r->result[STR(key.as<std::string>())] = getValue(kvp.second);
+      }
+    }
+    r->cond.notify_one();
+    queuePost.pop();
   }
 }
 } // namespace
@@ -164,14 +210,15 @@ update()
 void
 setup(sol::state& lua)
 {
-  luaState                  = &lua;
-  sol::table iflist         = lua.create_table();
-  iflist["Start"]           = &start;
-  iflist["Stop"]            = &stop;
-  iflist["Update"]          = &update;
-  iflist["MakeGetResponse"] = &empty_response;
-  iflist["Response"]        = lua.create_table();
-  lua["Server"]             = iflist;
+  luaState                   = &lua;
+  sol::table iflist          = lua.create_table();
+  iflist["Start"]            = &start;
+  iflist["Stop"]             = &stop;
+  iflist["Update"]           = &update;
+  iflist["MakeGetResponse"]  = &empty_response;
+  iflist["MakePostResponse"] = &empty_response;
+  iflist["Response"]         = lua.create_table();
+  lua["Server"]              = iflist;
 }
 
 } // namespace Server

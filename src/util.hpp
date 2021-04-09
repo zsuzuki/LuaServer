@@ -17,7 +17,7 @@ STR(const std::string str)
 }
 
 ///
-/// 引数生成
+/// 引数用JSON生成
 ///
 template <class T>
 json::value
@@ -89,4 +89,43 @@ getValue(T& v)
   }
   return ret;
 }
+
+/// JSONテーブル化
+sol::table
+buildTable(sol::state& lua, json::value& j)
+{
+  sol::table tbl = lua.create_table();
+  if (j.is_null())
+    return tbl;
+  if (j.is_array())
+  {
+    json::array& ar = j.as_array();
+    int          i  = 0;
+    for (auto& v : ar)
+    {
+      tbl[i++] = v.as_double();
+    }
+  }
+  else if (j.is_object())
+  {
+    json::object obj = j.as_object();
+    for (auto& o : obj)
+    {
+      auto& value = o.second;
+      auto* name  = o.first.c_str();
+      if (value.is_integer())
+        tbl[name] = value.as_integer();
+      else if (value.is_double())
+        tbl[name] = value.as_double();
+      else if (value.is_boolean())
+        tbl[name] = value.as_bool();
+      else if (value.is_string())
+        tbl[name] = value.as_string();
+      else if (value.is_object() || value.is_array())
+        tbl[name] = buildTable(lua, value);
+    }
+  }
+  return tbl;
+}
+
 } // namespace Util

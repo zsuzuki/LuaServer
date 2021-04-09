@@ -12,7 +12,10 @@ function waitLoop()
 end
 
 -- GETメソッドのレスポンス生成
-function makeGetResponse()
+function makeGetResponse(args)
+    for k, v in pairs(args) do
+        print(k, v)
+    end
     local res = {}
     res.A = true
     res.B = "Hello,World"
@@ -26,12 +29,32 @@ function makeGetResponse()
     return res
 end
 
+-- POSTメソッドのレスポンス生成
+function makePostResponse(args)
+    for k, v in pairs(args) do
+        print(k, v)
+    end
+    local res = {}
+    res.A = false
+    res.B = "Hello,World"
+    res.C = 32
+    res.D = 9.4
+    res.Count = count
+    if count & 1 == 0 then
+        res.Option = "Enable"
+    end
+    count = count + 1
+    print "response done"
+    return res
+end
+
 --
 local co = coroutine.create(waitLoop)
 local finish = true
 print "server start"
 Server.Start("/demo", port, domain)
 Server.MakeGetResponse = makeGetResponse
+Server.MakePostResponse = makePostResponse
 repeat
     finish = true
     if coroutine.status(co) ~= "dead" then
