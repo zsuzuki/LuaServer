@@ -29,6 +29,17 @@ sol::state* luaState;
 http_listener listener;
 std::mutex    mutex;
 
+//
+std::condition_variable      waitCond;
+std::mutex                   waitMutex;
+std::unique_lock<std::mutex> waitLock{waitMutex};
+
+void
+sleep()
+{
+  waitCond.wait(waitLock);
+}
+
 // 返答用(GET)
 struct GetRes
 {
@@ -65,6 +76,7 @@ empty_response()
 void
 respond_get(http_request req)
 {
+  waitCond.notify_one();
   std::lock_guard<std::mutex> lock(mutex);
 
   auto& lua = *luaState;
@@ -92,6 +104,7 @@ respond_get(http_request req)
 void
 respond_post(http_request req)
 {
+  waitCond.notify_one();
   req.extract_json()
       .then([&](pplx::task<json::value> task) {
         try
@@ -212,6 +225,7 @@ setup(sol::state& lua)
   iflist["Start"]            = &start;
   iflist["Stop"]             = &stop;
   iflist["Update"]           = &update;
+  iflist["Sleep"]            = &sleep;
   iflist["MakeGetResponse"]  = &empty_response;
   iflist["MakePostResponse"] = &empty_response;
   iflist["Response"]         = lua.create_table();

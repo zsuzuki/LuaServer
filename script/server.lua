@@ -1,10 +1,16 @@
 local port = 12345
 local domain = ""
 local count = 0
+local toSleep = true
 
 -- サーバーの待ち受けループ
 function waitLoop()
     repeat
+        if toSleep then
+            Server.Sleep()
+            toSleep = false
+            print "wake up"
+        end
         Server.Update()
         coroutine.yield(false)
     until false
@@ -27,6 +33,7 @@ function makeGetResponse(args)
     end
     count = count + 1
     print "GET response"
+    toSleep = true
     return res
 end
 
@@ -46,6 +53,7 @@ function makePostResponse(args)
     end
     count = count + 1
     print "POST response"
+    toSleep = true
     return res
 end
 
