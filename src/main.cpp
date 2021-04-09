@@ -1,3 +1,4 @@
+#include "client.hpp"
 #include "server.hpp"
 #include <iostream>
 #include <json_util.hpp>
@@ -131,6 +132,7 @@ main(int argc, char** argv)
     LUA["ChangeDir"]   = change_dir;
 
     Server::setup(LUA);
+    Client::setup(LUA);
     if (lua_script.empty() == false)
       LUA.script(lua_script);
     else

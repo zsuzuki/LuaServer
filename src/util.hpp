@@ -10,7 +10,7 @@ using namespace utility;
 using namespace web;
 
 //
-utility::string_t
+inline utility::string_t
 STR(const std::string str)
 {
   return conversions::to_string_t(str);
@@ -91,7 +91,7 @@ getValue(T& v)
 }
 
 /// JSONテーブル化
-sol::table
+inline sol::table
 buildTable(sol::state& lua, json::value& j)
 {
   sol::table tbl = lua.create_table();

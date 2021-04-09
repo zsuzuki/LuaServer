@@ -26,6 +26,7 @@ function makeGetResponse(args)
         res.Option = "Enable"
     end
     count = count + 1
+    print "GET response"
     return res
 end
 
@@ -44,7 +45,7 @@ function makePostResponse(args)
         res.Option = "Enable"
     end
     count = count + 1
-    print "response done"
+    print "POST response"
     return res
 end
 

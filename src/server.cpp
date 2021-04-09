@@ -1,5 +1,6 @@
 #include "server.hpp"
 #include "util.hpp"
+#include <atomic_queue.h>
 #include <cpprest/filestream.h>
 #include <cpprest/http_client.h>
 #include <cpprest/http_listener.h>
@@ -38,7 +39,7 @@ struct GetRes
   std::mutex                         mutex;
   unique_lock                        lock{mutex};
 };
-std::queue<GetRes*> queueGet;
+Queue<GetRes> queueGet(100);
 // 返答用(POST)
 struct PostRes
 {
@@ -49,7 +50,7 @@ struct PostRes
   std::mutex              mutex;
   unique_lock             lock{mutex};
 };
-std::queue<PostRes*> queuePost;
+Queue<PostRes> queuePost(100);
 
 const json::value emptyStr = json::value::string(STR("empty"));
 
@@ -164,9 +165,8 @@ update()
 {
   auto& lua = *luaState;
   // GETリクエストへの返答生成処理
-  if (!queueGet.empty())
+  if (auto* r = queueGet.pop())
   {
-    auto*      r    = queueGet.front();
     sol::table args = lua.create_table();
     for (auto& v : r->arguments)
       args[v.first] = v.second;
@@ -182,12 +182,10 @@ update()
       }
     }
     r->cond.notify_one();
-    queueGet.pop();
   }
   // POSTリクエストへの返答生成処理
-  if (!queuePost.empty())
+  if (auto* r = queuePost.pop())
   {
-    auto*      r    = queuePost.front();
     auto       args = buildTable(lua, r->arguments);
     auto       res  = lua["Server"]["MakePostResponse"](args);
     sol::table t    = res[0];
@@ -201,7 +199,6 @@ update()
       }
     }
     r->cond.notify_one();
-    queuePost.pop();
   }
 }
 } // namespace

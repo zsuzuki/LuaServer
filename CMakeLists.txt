@@ -16,7 +16,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lua)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
-set(serv_src src/main.cpp src/server.cpp)
+set(serv_src src/main.cpp src/server.cpp src/client.cpp)
 
 file(GLOB lua lua/*.c)
 file(GLOB libsrc lib/*.cpp)
