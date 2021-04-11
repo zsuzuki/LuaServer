@@ -27,6 +27,7 @@ function makeGetResponse(args)
     res.B = "Hello,World"
     res.C = 55
     res.D = 10.26
+    res.UUID = UUID()
     res.Count = count
     if count & 1 == 0 then
         res.Option = "Enable"
@@ -47,6 +48,7 @@ function makePostResponse(args)
     res.B = "Hello,World"
     res.C = 32
     res.D = 9.4
+    res.UUID = UUID()
     res.Count = count
     if count & 1 == 0 then
         res.Option = "Enable"

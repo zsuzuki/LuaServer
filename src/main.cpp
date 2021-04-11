@@ -1,6 +1,10 @@
 #include "client.hpp"
 #include "leveldb.hpp"
 #include "server.hpp"
+#include <boost/lexical_cast.hpp>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <iostream>
 #include <json_util.hpp>
 #include <sol/sol.hpp>
@@ -18,6 +22,16 @@ namespace
 {
 ///
 sol::state LUA;
+
+///
+/// UUID生成
+///
+std::string
+gen_uuid()
+{
+  auto uuid = boost::uuids::random_generator()();
+  return boost::lexical_cast<std::string>(uuid);
+}
 
 ///
 /// ファイルリストの取得
@@ -131,6 +145,7 @@ main(int argc, char** argv)
     LUA["FromJSON"]    = JSONUTIL::fromJSON;
     LUA["GetFileList"] = get_file_list;
     LUA["ChangeDir"]   = change_dir;
+    LUA["UUID"]        = gen_uuid;
 
     Server::setup(LUA);
     Client::setup(LUA);
