@@ -8,6 +8,7 @@ add_definitions(-DLUA_USER_H=<luauser.h>)
 
 project(luaserver)
 
+find_package(leveldb CONFIG REQUIRED)
 find_package(cpprestsdk CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Boost 1.70.0 REQUIRED COMPONENTS chrono thread system)
@@ -16,7 +17,9 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lua)
 include_directories(${OPENSSL_INCLUDE_DIR})
 
-set(serv_src src/main.cpp src/server.cpp src/client.cpp)
+link_directories(/usr/local/lib)
+
+set(serv_src src/main.cpp src/server.cpp src/client.cpp src/leveldb.cpp)
 
 file(GLOB lua lua/*.c)
 file(GLOB libsrc lib/*.cpp)
@@ -31,6 +34,7 @@ endif()
 
 target_link_libraries(luaserver
     PRIVATE
+        leveldb::leveldb
         ${Boost_LIBRARIES}
         ${OPENSSL_LIBRARIES}
         cpprestsdk::cpprest
