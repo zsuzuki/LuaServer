@@ -24,6 +24,7 @@ add_executable(luaserver ${serv_src} ${libsrc} ${lua})
 
 if(WIN32)
 set(libs
+    cpprestsdk::cpprestsdk_brotli_internal
     wsock32
     ws2_32)
 endif()
@@ -34,6 +35,4 @@ target_link_libraries(luaserver
         ${OPENSSL_LIBRARIES}
         cpprestsdk::cpprest
         cpprestsdk::cpprestsdk_zlib_internal
-        cpprestsdk::cpprestsdk_boost_internal
-        cpprestsdk::cpprestsdk_openssl_internal
         ${libs})

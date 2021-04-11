@@ -1,3 +1,7 @@
+#if defined(_MSC_VER)
+#include <WinSock2.h>
+#include <Windows.h>
+#endif
 #include "server.hpp"
 #include "util.hpp"
 #include <atomic_queue.h>
@@ -131,10 +135,23 @@ respond_post(http_request req)
 void
 start(std::string pt, int pr, std::string domain)
 {
+#if defined(_MSC_VER)
+  WSADATA wsadata;
+  if (WSAStartup(MAKEWORD(1, 1), &wsadata) != 0)
+  {
+    std::cerr << "WS error" << std::endl;
+    return;
+  }
+#endif
+
   auto& lua = *luaState;
 
   char hn[1024];
-  gethostname(hn, sizeof(hn));
+  if (gethostname(hn, sizeof(hn)) != 0)
+  {
+    std::cerr << "hostname get failed" << std::endl;
+    return;
+  }
   struct hostent* he = gethostbyname(hn);
   if (!he)
   {
@@ -170,6 +187,9 @@ void
 stop()
 {
   listener.close();
+#if defined(_MSC_VER)
+  WSACleanup();
+#endif
 }
 
 //

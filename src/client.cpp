@@ -75,8 +75,8 @@ struct Impl
         client
             .request(methods::POST, path, qlser, utf8string("application/json"))
             .then([this](http_response response) {
-              status_code = response.status_code();
-              if (status_code == 200)
+              this->status_code = response.status_code();
+              if (this->status_code == 200)
               {
                 return response.extract_string();
               }
