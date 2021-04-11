@@ -108,7 +108,6 @@ main(int argc, char** argv)
 
   std::string lua_file       = "";
   bool        direct_execute = false;
-  std::string use_path       = "Race";
   std::string lua_script;
   // 引数取得
   for (auto& s : l_args)
@@ -120,8 +119,6 @@ main(int argc, char** argv)
     }
     else if (s == "-e")
       direct_execute = true;
-    else if (s == "-s")
-      use_path = "Steward";
     else if (lua_file.empty() && lua_script.empty())
       lua_file = s;
     else
@@ -163,3 +160,4 @@ main(int argc, char** argv)
 
   return 0;
 }
+3
