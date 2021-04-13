@@ -24,7 +24,12 @@ include_directories(${OPENSSL_INCLUDE_DIR})
 
 link_directories(/usr/local/lib)
 
-set(serv_src src/main.cpp src/server.cpp src/client.cpp src/leveldb.cpp)
+set(serv_src
+    src/main.cpp
+    src/server.cpp
+    src/client.cpp
+    src/leveldb.cpp
+    src/async_command.cpp)
 
 file(GLOB lua lua/*.c)
 file(GLOB libsrc lib/*.cpp)

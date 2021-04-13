@@ -1,3 +1,4 @@
+#include "async_command.hpp"
 #include "client.hpp"
 #include "leveldb.hpp"
 #include "server.hpp"
@@ -147,6 +148,7 @@ main(int argc, char** argv)
     Server::setup(LUA);
     Client::setup(LUA);
     LevelDB::setup(LUA);
+    AsyncCommand::setup(LUA);
     if (lua_script.empty() == false)
       LUA.script(lua_script);
     else
