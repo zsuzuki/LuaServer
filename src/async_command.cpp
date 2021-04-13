@@ -1,15 +1,15 @@
 #include "async_command.hpp"
-#include <atomic>
-#include <chrono>
+#include <boost/process.hpp>
 #include <cstdlib>
-#include <future>
 #include <iostream>
+#include <memory>
 #include <sol/sol.hpp>
 #include <string>
-#include <thread>
 
 namespace AsyncCommand
 {
+namespace process = boost::process;
+using child_ptr   = std::shared_ptr<process::child>;
 
 namespace
 {
@@ -20,9 +20,7 @@ sol::state* luaState = nullptr;
 ///
 class Impl
 {
-  std::future<int> cmdret;
-  std::atomic_bool hasret;
-  int              retval;
+  child_ptr child;
 
 public:
   Impl()  = default;
@@ -30,36 +28,18 @@ public:
 
   bool execute(std::string cmd)
   {
-    hasret = false;
-    cmdret = std::async(std::launch::async, [cmd] {
-      errno = 0;
-      return system(cmd.c_str());
-    });
+    child = std::make_shared<process::child>(cmd);
     return true;
   }
-  bool is_execute()
-  {
-    bool valid = cmdret.valid();
-    if (valid)
-    {
-      auto st   = cmdret.wait_for(std::chrono::seconds(0));
-      auto exec = st != std::future_status::ready;
-      if (!exec)
-      {
-        retval = cmdret.get();
-        hasret = true;
-      }
-    }
-    return valid;
-  }
+  bool is_execute() { return child->running(); }
 
   sol::variadic_results get_result(sol::this_state L) const
   {
     sol::variadic_results r;
-    if (hasret)
+    if (child->running() == false)
     {
       r.push_back({L, sol::in_place_type<bool>, true});
-      r.push_back({L, sol::in_place_type<int>, retval});
+      r.push_back({L, sol::in_place_type<int>, child->exit_code()});
     }
     else
     {
@@ -67,6 +47,15 @@ public:
       r.push_back({L, sol::in_place_type<int>, 0});
     }
     return r;
+  }
+  void done()
+  {
+    if (child)
+    {
+      child->join();
+      child->terminate();
+      child.reset();
+    }
   }
 };
 
@@ -80,7 +69,8 @@ setup(sol::state& lua)
 {
   luaState = &lua;
   lua.new_usertype<Impl>("Execute", "Execute", &Impl::execute, "IsExecute",
-                         &Impl::is_execute, "GetResult", &Impl::get_result);
+                         &Impl::is_execute, "GetResult", &Impl::get_result,
+                         "Done", &Impl::done);
 }
 
 } // namespace AsyncCommand

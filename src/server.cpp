@@ -193,7 +193,7 @@ stop()
 }
 
 //
-void
+bool
 update()
 {
   auto& lua = *luaState;
@@ -233,6 +233,7 @@ update()
     }
     r->cond.notify_one();
   }
+  return queuePost.empty() && queueGet.empty();
 }
 } // namespace
 

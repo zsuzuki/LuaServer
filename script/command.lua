@@ -6,6 +6,7 @@ function waitLoop()
     repeat
         if cmd:IsExecute() == false then
             ok, status = cmd:GetResult()
+            cmd:Done()
         end
     until ok
     print("STATUS:", ok, status)
@@ -16,6 +17,10 @@ end
 local co = coroutine.create(waitLoop)
 local finish = true
 print "command start"
+if #Args < 1 then
+    print "<need command string>"
+    return
+end
 cmd:Execute(Args[1])
 repeat
     finish = true
