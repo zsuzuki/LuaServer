@@ -16,7 +16,7 @@ project(luaserver)
 find_package(leveldb CONFIG REQUIRED)
 find_package(cpprestsdk CONFIG REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(Boost 1.70.0 REQUIRED COMPONENTS chrono exception thread random system)
+find_package(Boost 1.70.0 REQUIRED COMPONENTS chrono exception filesystem thread random system)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lua)
