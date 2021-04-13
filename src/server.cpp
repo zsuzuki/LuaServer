@@ -137,7 +137,7 @@ start(std::string pt, int pr, std::string domain)
 {
 #if defined(_MSC_VER)
   WSADATA wsadata;
-  if (WSAStartup(MAKEWORD(1, 1), &wsadata) != 0)
+  if (WSAStartup(MAKEWORD(2, 0), &wsadata) != 0)
   {
     std::cerr << "WS error" << std::endl;
     return;
@@ -152,20 +152,8 @@ start(std::string pt, int pr, std::string domain)
     std::cerr << "hostname get failed" << std::endl;
     return;
   }
-  struct hostent* he = gethostbyname(hn);
-  if (!he)
-  {
-    std::cerr << "Bad host lookup" << std::endl;
-    return;
-  }
+
   std::string hostname = hn;
-  for (int i = 0; he->h_addr_list[i] != 0; ++i)
-  {
-    struct in_addr addr;
-    memcpy(&addr, he->h_addr_list[i], sizeof(struct in_addr));
-    // std::cout << "Address " << i << ": " << inet_ntoa(addr) << std::endl;
-    hostname = inet_ntoa(addr);
-  }
   if (!domain.empty())
     hostname += domain;
   lua["Server"]["hostname"] = hostname;
