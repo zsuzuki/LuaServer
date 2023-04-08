@@ -60,7 +60,8 @@ get_table(sol::state_view& lua, JSON& j)
   int        idx      = 0;
   for (auto& el : j.items())
   {
-    auto set = [&](auto v) {
+    auto set = [&](auto v)
+    {
       if (is_array)
         table[++idx] = v;
       else

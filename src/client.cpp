@@ -46,7 +46,7 @@ struct Impl
     pplx::task<void>   request;
   };
 
-  Queue<Result> result_queue{4};
+  Queue<Result> result_queue{64};
 
   Impl() = default;
   ~Impl()
@@ -74,33 +74,40 @@ struct Impl
     result->request =
         client
             .request(methods::POST, path, qlser, utf8string("application/json"))
-            .then([this](http_response response) {
-              this->status_code = response.status_code();
-              if (this->status_code == 200)
-              {
-                return response.extract_string();
-              }
-              return pplx::task_from_result(STR("{}"));
-            })
-            .then([result, this](utility::string_t str) {
-              auto ret         = conversions::to_utf8string(str);
-              result->response = nlohmann::json::parse(ret);
-            })
-            .then([=](pplx::task<void> previous_task) mutable {
-              if (previous_task._GetImpl()->_HasUserException())
-              {
-                auto holder = previous_task._GetImpl()->_GetExceptionHolder();
-                try
+            .then(
+                [this](http_response response)
                 {
-                  holder->_RethrowUserException();
-                }
-                catch (std::exception& e)
+                  this->status_code = response.status_code();
+                  if (this->status_code == 200)
+                  {
+                    return response.extract_string();
+                  }
+                  return pplx::task_from_result(STR("{}"));
+                })
+            .then(
+                [result, this](utility::string_t str)
                 {
-                  std::cerr << "http error:" << e.what() << std::endl;
-                }
-              }
-              result_queue.push(result);
-            });
+                  auto ret         = conversions::to_utf8string(str);
+                  result->response = nlohmann::json::parse(ret);
+                })
+            .then(
+                [=](pplx::task<void> previous_task) mutable
+                {
+                  if (previous_task._GetImpl()->_HasUserException())
+                  {
+                    auto holder =
+                        previous_task._GetImpl()->_GetExceptionHolder();
+                    try
+                    {
+                      holder->_RethrowUserException();
+                    }
+                    catch (std::exception& e)
+                    {
+                      std::cerr << "http error:" << e.what() << std::endl;
+                    }
+                  }
+                  result_queue.push(result);
+                });
   }
 
   //

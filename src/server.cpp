@@ -11,6 +11,7 @@
 #include <functional>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <queue>
 #include <sol/sol.hpp>
 #include <string>
@@ -30,8 +31,8 @@ namespace
 {
 sol::state* luaState;
 
-http_listener listener;
-std::mutex    mutex;
+std::shared_ptr<http_listener> listener;
+std::mutex                     mutex;
 
 //
 std::condition_variable      waitCond;
@@ -67,7 +68,7 @@ struct PostRes
 };
 Queue<PostRes> queuePost(100);
 
-const json::value emptyStr = json::value::string(STR("empty"));
+// const json::value emptyStr = json::value::string(STR("empty"));
 
 //
 void
@@ -99,7 +100,7 @@ respond_get(http_request req)
   r.cond.wait(r.lock);
 
   if (r.result.is_null())
-    req.reply(status_codes::BadRequest, emptyStr);
+    req.reply(status_codes::BadRequest, json::value::string(STR("empty")));
   else
     req.reply(status_codes::OK, r.result);
 }
@@ -109,25 +110,30 @@ void
 respond_post(http_request req)
 {
   waitCond.notify_one();
+  std::cout << "remote:" << req.remote_address() << std::endl;
+  std::cout << "uri:" << req.request_uri().host() << std::endl;
   req.extract_json()
-      .then([&](pplx::task<json::value> task) {
-        try
-        {
-          PostRes r;
-          r.arguments = task.get();
-          queuePost.push(&r);
-          r.cond.wait(r.lock);
+      .then(
+          [&](pplx::task<json::value> task)
+          {
+            try
+            {
+              PostRes r;
+              r.arguments = task.get();
+              queuePost.push(&r);
+              r.cond.wait(r.lock);
 
-          if (r.result.is_null())
-            req.reply(status_codes::BadRequest, emptyStr);
-          else
-            req.reply(status_codes::OK, r.result);
-        }
-        catch (http_exception const& e)
-        {
-          std::cout << e.what() << std::endl;
-        }
-      })
+              if (r.result.is_null())
+                req.reply(status_codes::BadRequest,
+                          json::value::string(STR("empty")));
+              else
+                req.reply(status_codes::OK, r.result);
+            }
+            catch (http_exception const& e)
+            {
+              std::cout << e.what() << std::endl;
+            }
+          })
       .wait();
 }
 
@@ -163,18 +169,18 @@ start(std::string pt, int pr, std::string domain)
   auto url = std::string("http://") + hostname;
   auto n   = url + ":" + std::to_string(pr) + pt;
   std::cout << "URL: " << n << std::endl;
-  http_listener tmp(STR(n));
-  listener = std::move(tmp);
-  listener.open().wait();
-  listener.support(methods::GET, [&](http_request req) { respond_get(req); });
-  listener.support(methods::POST, [&](http_request req) { respond_post(req); });
+  listener = std::make_shared<http_listener>(STR(n));
+  listener->open().wait();
+  listener->support(methods::GET, [&](http_request req) { respond_get(req); });
+  listener->support(methods::POST,
+                    [&](http_request req) { respond_post(req); });
 }
 
 // サーバー停止
 void
 stop()
 {
-  listener.close();
+  listener->close();
 #if defined(_MSC_VER)
   WSACleanup();
 #endif

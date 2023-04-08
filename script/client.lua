@@ -2,7 +2,7 @@ local httpclient = Client.new()
 local waitResponse = false
 
 httpclient.Port = 12345
-httpclient.Server = "192.168.1.38"
+httpclient.Server = "10.211.55.3"
 
 -- 待ち受け
 function waitLoop()

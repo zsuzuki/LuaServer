@@ -23,7 +23,8 @@ template <class T>
 json::value
 getValue(T& v)
 {
-  auto get = [](auto gv) {
+  auto get = [](auto gv)
+  {
     json::value r;
     bool        s = true;
     if (gv.template is<bool>())
